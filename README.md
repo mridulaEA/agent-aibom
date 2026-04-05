@@ -409,26 +409,19 @@ This tool implements the concept described in [Agentic AI BOM: The Next Layer of
 
 ---
 
-## Roadmap
+## What's Included
 
-### v1-minimal (current)
-- [x] Claude Code + MCP + Generic discovery
-- [x] Permission & delegation graphs
+- [x] Multi-framework discovery (Claude Code, MCP, CrewAI, LangGraph, AutoGen, Generic)
+- [x] Permission & delegation graphs (NetworkX)
 - [x] Risk engine (12 rules, provenance, A-F grading)
 - [x] JSON + SARIF + CSV export
-- [x] Mermaid + DOT visualization
+- [x] Mermaid + DOT + D3 visualization
+- [x] Interactive HTML dashboard (D3.js, 5 tabs)
 - [x] BOM persistence + diff
-- [x] CLI (scan, risk, export, graph, diff)
-- [x] 79 tests passing
+- [x] CLI (scan, risk, export, graph, diff, dashboard, version)
+- [x] 84 tests passing
 
-### v1-extensions (planned)
-- [ ] CycloneDX 1.6 + SPDX 2.3 export (with validator testing)
-- [ ] Runtime SDK & trace ledger
-- [ ] FastAPI REST API
-- [ ] Interactive HTML dashboard (D3.js)
-- [ ] Neo4j graph database integration
-- [ ] Grafana dashboard provisioning
-- [ ] `pip install agent-aibom` package distribution
+An extended suite covering runtime tracing, REST API, additional export formats, graph database integrations, and monitoring dashboards is available on demand.
 
 ---
 
