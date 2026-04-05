@@ -1,0 +1,44 @@
+# Agent AIBOM — Example Configuration
+# Place this file in your project root or pass via --config flag
+
+scan:
+  scan_paths: ["."]
+  frameworks:
+    - claude-code
+    - mcp
+    - generic
+  exclude_patterns:
+    - node_modules
+    - .venv
+    - venv
+    - __pycache__
+    - .git
+    - .pytest_cache
+    - dist
+    - build
+  # Per-scanner overrides (optional)
+  # scanner_overrides:
+  #   claude-code:
+  #     include_globs:
+  #       - ".claude/agents/*.md"
+  #       - "custom-agents/**/*.md"
+  #   mcp:
+  #     include_globs:
+  #       - "src/**/.mcp.json"
+  #     extra_exclude:
+  #       - "test-fixtures"
+  #   generic:
+  #     enabled: false
+
+risk:
+  approved_models: []
+  approved_tools: []
+  require_owner: true
+  require_approval_gates: true
+
+export:
+  output_dir: "./aibom-output"
+  formats:
+    - json
+    - sarif
+  pretty_print: true

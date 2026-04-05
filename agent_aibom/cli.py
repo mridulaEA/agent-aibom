@@ -26,8 +26,15 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+VERBOSE = False
 
 # --- Shared helpers ---
+
+
+def _log(msg: str) -> None:
+    """Print only in verbose mode."""
+    if VERBOSE:
+        console.print(f"[dim]{msg}[/dim]")
 
 
 def _resolve_store_dir(store_dir: str | None, settings: Settings | None = None) -> Path:
@@ -36,6 +43,12 @@ def _resolve_store_dir(store_dir: str | None, settings: Settings | None = None) 
     if settings:
         return settings.resolve_store_dir()
     return Settings().resolve_store_dir()
+
+
+@app.callback()
+def main(verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output")):
+    global VERBOSE
+    VERBOSE = verbose
 
 
 def _discover(path: str, config: ScanConfig | None = None) -> AgenticBOM:
@@ -47,9 +60,14 @@ def _discover(path: str, config: ScanConfig | None = None) -> AgenticBOM:
 
     cfg = config or ScanConfig()
     orch = DiscoveryOrchestrator(cfg)
+    _log(f"Scanners: {orch.scanner_names}")
+    _log(f"Frameworks: {cfg.frameworks}")
+    _log(f"Exclude: {cfg.exclude_patterns}")
 
     with console.status("[bold blue]Scanning for agents..."):
         agents = orch.discover(scan_path)
+
+    _log(f"Discovered {len(agents)} agents")
 
     bom = AgenticBOM(
         metadata=BOMMetadata(
