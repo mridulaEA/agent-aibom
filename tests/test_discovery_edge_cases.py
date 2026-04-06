@@ -64,7 +64,7 @@ def test_claude_scanner_with_tools_and_model():
             "  - Write\n"
             "  - Bash\n"
             "  - WebFetch\n"
-            "  - mcp__siq__scan\n"
+            "  - mcp__myserver__scan\n"
             "---\n"
             "Body with subagent_type=\"helper-bot\" reference.\n"
         )

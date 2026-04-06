@@ -16,6 +16,7 @@ from agent_aibom.risk.rules import (
     rule_data_exfiltration,
     rule_excessive_permissions,
     rule_external_action,
+    rule_intent_laundering,
     rule_missing_approval_gate,
     rule_missing_trace,
     rule_no_owner,
@@ -123,6 +124,38 @@ def test_rule_unapproved_model():
     config = RiskConfig(approved_models=["sonnet"])
     findings = rule_unapproved_model(agent, config)
     assert len(findings) == 1
+
+
+def test_rule_intent_laundering():
+    agent = AgentIdentity(
+        name="delegator",
+        delegations=[
+            DelegationLink(
+                from_agent="delegator", to_agent="worker",
+                delegation_type="spawn", authority_scope=[],  # no scope = laundering risk
+            ),
+        ],
+    )
+    findings = rule_intent_laundering(agent, RiskConfig())
+    assert len(findings) == 1
+    assert findings[0].category == RiskCategory.INTENT_LAUNDERING
+    assert findings[0].severity == RiskSeverity.HIGH
+
+
+def test_rule_intent_laundering_with_scope():
+    """Delegation with explicit authority_scope should NOT flag."""
+    agent = AgentIdentity(
+        name="delegator",
+        delegations=[
+            DelegationLink(
+                from_agent="delegator", to_agent="worker",
+                delegation_type="spawn",
+                authority_scope=["read:account-data"],
+            ),
+        ],
+    )
+    findings = rule_intent_laundering(agent, RiskConfig())
+    assert len(findings) == 0
 
 
 def test_risk_engine_scoring(sample_bom):

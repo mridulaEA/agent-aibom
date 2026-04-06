@@ -111,7 +111,7 @@ class MCPScanner(AbstractScanner):
             return None
 
         # Derive server name from parent directory
-        parent = server_file.parent.parent.name  # e.g., security_iq
+        parent = server_file.parent.parent.name
 
         return AgentIdentity(
             name=f"mcp-server:{parent}",

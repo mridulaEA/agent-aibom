@@ -61,6 +61,7 @@ class RiskCategory(str, Enum):
     DATA_EXFILTRATION = "data-exfiltration"
     PROMPT_INJECTION = "prompt-injection"
     UNBOUNDED_DELEGATION = "unbounded-delegation"
+    INTENT_LAUNDERING = "intent-laundering"
     MISSING_TRACE = "missing-trace"
     STALE_DEPENDENCY = "stale-dependency"
     SECRET_EXPOSURE = "secret-exposure"
@@ -127,6 +128,7 @@ class DelegationLink(BaseModel):
     tools_delegated: list[str] = Field(default_factory=list)
     permissions_inherited: bool = False
     max_depth: int | None = None
+    authority_scope: list[str] = Field(default_factory=list)  # e.g., ["read:account-data"]
 
 
 class ModelBinding(BaseModel):
@@ -274,6 +276,47 @@ class RuntimeTrace(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+# --- Attestations ---
+
+class DelegationHop(BaseModel):
+    """A single hop in a delegation chain, with hash for non-repudiation."""
+    agent_name: str
+    action: str = ""
+    authority_scope: list[str] = Field(default_factory=list)
+    evidence_hash: str = ""  # SHA-256 of (prompt + tool_call + response)
+
+class AgentAttestation(BaseModel):
+    """Signed evidence binding human authorization to agent execution."""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Who authorized
+    principal: str  # e.g., "user:alice@corp.com" or "service:cron-job-123"
+    principal_type: str = "human"  # "human" or "service"
+
+    # What was authorized
+    agent_name: str
+    agent_bom_link: str = ""  # urn:cdx:serial/version#agent-name
+    authority_scope: list[str] = Field(default_factory=list)  # e.g., ["read:account-data"]
+
+    # Delegation chain
+    delegation_chain: list[DelegationHop] = Field(default_factory=list)
+
+    # Approval
+    approval_gate: str | None = None  # gate name if triggered
+    approval_granted: bool = False
+    policy_reference: str | None = None  # policy ID that was evaluated
+    policy_result: str | None = None  # "pass", "fail", "not-evaluated"
+
+    # Runtime link
+    trace_id: str | None = None  # pointer to full execution trace
+
+    # Integrity
+    chain_hash: str = ""  # SHA-256 of the full delegation chain
+    signature: str = ""  # Ed25519 or similar, signed by the governance layer (not the agent)
+    signed_by: str = ""  # identity of the attestation issuer
+
+
 # --- The BOM ---
 
 class BOMMetadata(BaseModel):
@@ -287,6 +330,18 @@ class BOMMetadata(BaseModel):
     repository: str | None = None
     branch: str | None = None
     commit_sha: str | None = None
+
+    @property
+    def bom_link(self) -> str:
+        """CycloneDX BOM-Link URN (RFC 8141 / IANA-registered)."""
+        # Extract UUID from serial_number (urn:uuid:xxx → xxx)
+        uid = self.serial_number.replace("urn:uuid:", "")
+        version = self.bom_version.split(".")[0]  # major version
+        return f"urn:cdx:{uid}/{version}"
+
+    def bom_link_ref(self, agent_name: str) -> str:
+        """BOM-Link URN referencing a specific agent within this BOM."""
+        return f"{self.bom_link}#{agent_name}"
 
 
 class AgenticBOM(BaseModel):

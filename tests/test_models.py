@@ -81,3 +81,51 @@ def test_bom_serialization(sample_bom):
     restored = AgenticBOM.model_validate(data)
     assert restored.agent_count == sample_bom.agent_count
     assert restored.agents[0].name == sample_bom.agents[0].name
+
+
+def test_bom_link():
+    meta = BOMMetadata()
+    link = meta.bom_link
+    assert link.startswith("urn:cdx:")
+    assert "/1" in link  # version 1
+
+    ref = meta.bom_link_ref("my-agent")
+    assert ref.endswith("#my-agent")
+    assert ref.startswith("urn:cdx:")
+
+
+def test_delegation_authority_scope():
+    from agent_aibom.core.models import DelegationLink
+    d = DelegationLink(
+        from_agent="a", to_agent="b", delegation_type="spawn",
+        authority_scope=["read:account-data", "write:none"],
+    )
+    assert d.authority_scope == ["read:account-data", "write:none"]
+
+
+def test_agent_attestation():
+    from agent_aibom.core.models import AgentAttestation, DelegationHop
+    att = AgentAttestation(
+        principal="user:alice@corp.com",
+        agent_name="finance-agent",
+        agent_bom_link="urn:cdx:abc-123/1#finance-agent",
+        authority_scope=["read:account-data"],
+        delegation_chain=[
+            DelegationHop(agent_name="support-agent", action="delegate", authority_scope=["read:account-data"]),
+            DelegationHop(agent_name="finance-agent", action="sql-query", authority_scope=["read:account-data"]),
+        ],
+        approval_gate="high-risk-sql",
+        approval_granted=True,
+        policy_reference="data-access-policy-v2",
+        policy_result="pass",
+        trace_id="trace-xyz-789",
+    )
+    assert att.principal == "user:alice@corp.com"
+    assert len(att.delegation_chain) == 2
+    assert att.approval_granted is True
+
+    # Serialization round-trip
+    data = att.model_dump(mode="json")
+    restored = AgentAttestation.model_validate(data)
+    assert restored.agent_name == "finance-agent"
+    assert len(restored.delegation_chain) == 2

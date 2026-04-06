@@ -7,6 +7,7 @@ import re
 from agent_aibom.core.config import RiskConfig
 from agent_aibom.core.models import (
     AgentIdentity,
+    FindingSource,
     PermissionScope,
     RiskCategory,
     RiskFinding,
@@ -182,6 +183,30 @@ def rule_unbounded_delegation(agent: AgentIdentity, config: RiskConfig) -> list[
     return findings
 
 
+def rule_intent_laundering(agent: AgentIdentity, config: RiskConfig) -> list[RiskFinding]:
+    """Flag agents that delegate to external-tool-capable agents without authority scope."""
+    findings: list[RiskFinding] = []
+    for deleg in agent.delegations:
+        if not deleg.authority_scope and deleg.delegation_type in ("spawn", "route", "escalate"):
+            findings.append(RiskFinding(
+                agent_id=agent.id,
+                agent_name=agent.name,
+                category=RiskCategory.INTENT_LAUNDERING,
+                severity=RiskSeverity.HIGH,
+                title=f"Intent laundering risk: delegation to '{deleg.to_agent}' without authority scope",
+                description=(
+                    f"Agent delegates to '{deleg.to_agent}' via '{deleg.delegation_type}' "
+                    f"without specifying authority_scope. The downstream agent may perform "
+                    f"actions beyond what the original principal intended."
+                ),
+                evidence=f"Delegation: {deleg.from_agent} → {deleg.to_agent}, authority_scope: []",
+                recommendation="Add explicit authority_scope to delegation links to constrain downstream actions",
+                source=FindingSource.STATIC_ANALYSIS,
+                confidence=0.7,
+            ))
+    return findings
+
+
 def rule_missing_trace(agent: AgentIdentity, config: RiskConfig) -> list[RiskFinding]:
     # In static analysis, no agent has runtime traces — flag as info
     return [RiskFinding(
@@ -246,6 +271,7 @@ ALL_RULES = [
     rule_data_exfiltration,
     rule_prompt_injection,
     rule_unbounded_delegation,
+    rule_intent_laundering,
     rule_missing_trace,
     rule_stale_dependency,
     rule_secret_exposure,
